@@ -103,7 +103,7 @@ async fn send_request() {
 
 ### Complete Example
 
-Check out the [examples directory]([./examples](https://github.com/fast/fastrace-poem/tree/main/examples)) for complete working examples showing:
+Check out the [examples directory]([./examples](https://github.com/fast/fastrace-poem/tree/main/examples) for complete working examples showing:
 
 - `client.rs` - How to send requests with trace context
 - `server.rs` - How to receive and process trace context using `fastrace-poem`
