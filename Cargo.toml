@@ -1,0 +1,23 @@
+[package]
+name = "fastrace-poem"
+version = "0.1.0"
+
+categories = ["development-tools::debugging"]
+description = "A Poem middleware for propagating trace context for fastrace"
+keywords = ["tracing", "fastrace", "poem", "traceparent", "propagation"]
+readme = "../README.md"
+
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/fast/fastrace-poem"
+rust-version = "1.83"
+
+[dependencies]
+fastrace = "0.7"
+poem = "3.1"
+
+[dev-dependencies]
+fastrace = { version = "0.7", features = ["enable"] }
+fastrace-reqwest = "0.1"
+reqwest = "0.12"
+tokio = { version = "1.44", features = ["full"] }
