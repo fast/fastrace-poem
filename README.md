@@ -45,12 +45,6 @@ use fastrace_poem::FastraceMiddleware;
 use poem::{get, handler, EndpointExt, Request, Response, Route, Server};
 use poem::listener::TcpListener;
 
-#[handler]
-#[fastrace::trace] // Trace individual handlers.
-fn ping() -> Response {
-    Response::builder().body("pong")
-}
-
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
     // Configure fastrace reporter.
@@ -68,6 +62,12 @@ async fn main() -> Result<(), std::io::Error> {
     fastrace::flush();
 
     Ok(())
+}
+
+#[handler]
+#[fastrace::trace] // Trace individual handlers.
+fn ping() -> Response {
+    Response::builder().body("pong")
 }
 ```
 
