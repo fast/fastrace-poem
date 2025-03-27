@@ -77,7 +77,6 @@ To propagate trace context from clients to your Poem service:
 
 ```rust
 use fastrace::prelude::*;
-use fastrace_reqwest::traceparent_headers;
 use reqwest::Client;
 
 #[fastrace::trace]
@@ -85,7 +84,7 @@ async fn send_request() {
     let client = Client::new();
     let response = client
         .get("http://your-poem-service/endpoint")
-        .headers(traceparent_headers()) // Adds traceparent header.
+        .headers(fastrace_reqwest::traceparent_headers()) // Adds traceparent header.
         .send()
         .await
         .unwrap();
