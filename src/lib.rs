@@ -65,7 +65,7 @@ impl<E: Endpoint> Endpoint for FastraceEndpoint<E> {
         let span = if let Some(parent) = parent {
             // TODO: use low cardinality route once poem supports it.
             let name = format!("{} {}", req.method().as_str(), req.uri().path());
-            
+
             let root = Span::root(name, parent);
 
             root.add_properties(|| {
