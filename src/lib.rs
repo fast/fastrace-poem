@@ -63,8 +63,10 @@ impl<E: Endpoint> Endpoint for FastraceEndpoint<E> {
         });
 
         let span = if let Some(parent) = parent {
-            let span_name = get_request_span_name(&req);
-            let root = Span::root(span_name, parent);
+            // TODO: use low cardinality route once poem supports it.
+            let name = format!("{} {}", req.method().as_str(), req.uri().path());
+            
+            let root = Span::root(name, parent);
 
             root.add_properties(|| {
                 [
@@ -93,10 +95,4 @@ impl<E: Endpoint> Endpoint for FastraceEndpoint<E> {
         .in_span(span)
         .await
     }
-}
-
-// See [OpenTelemetry semantic conventions](https://opentelemetry.io/docs/specs/semconv/http/http-spans/#name)
-fn get_request_span_name(req: &Request) -> String {
-    // TODO: use low cardinality route once poem supports it.
-    format!("{} {}", req.method().as_str(), req.uri().path())
 }
