@@ -238,6 +238,7 @@ version = "0.1.0"
 dependencies = [
  "fastrace",
  "fastrace-reqwest",
+ "opentelemetry-semantic-conventions",
  "poem",
  "reqwest",
  "tokio",
@@ -872,6 +873,12 @@ dependencies = [
  "pkg-config",
  "vcpkg",
 ]
+
+[[package]]
+name = "opentelemetry-semantic-conventions"
+version = "0.30.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83d059a296a47436748557a353c5e6c5705b9470ef6c95cfc52c21a8814ddac2"
 
 [[package]]
 name = "parking_lot"

@@ -1,6 +1,10 @@
 #![doc = include_str!("../README.md")]
 
 use fastrace::prelude::*;
+use opentelemetry_semantic_conventions::trace::HTTP_REQUEST_METHOD;
+use opentelemetry_semantic_conventions::trace::HTTP_RESPONSE_STATUS_CODE;
+use opentelemetry_semantic_conventions::trace::HTTP_ROUTE;
+use opentelemetry_semantic_conventions::trace::URL_PATH;
 use poem::Endpoint;
 use poem::IntoResponse;
 use poem::Middleware;
@@ -54,15 +58,41 @@ impl<E: Endpoint> Endpoint for FastraceEndpoint<E> {
 
     async fn call(&self, req: Request) -> Result<Self::Output> {
         let headers = req.headers();
-        let parent = headers
-            .get(TRACEPARENT_HEADER)
-            .and_then(|traceparent| SpanContext::decode_w3c_traceparent(traceparent.to_str().ok()?))
-            .unwrap_or(SpanContext::random());
-        let root = Span::root(req.uri().to_string(), parent);
-        self.inner
-            .call(req)
-            .in_span(root)
-            .await
-            .map(|resp| resp.into_response())
+        let parent = headers.get(TRACEPARENT_HEADER).and_then(|traceparent| {
+            SpanContext::decode_w3c_traceparent(traceparent.to_str().ok()?)
+        });
+
+        let span = if let Some(parent) = parent {
+            // TODO: use low cardinality route once poem supports it.
+            let name = format!("{} {}", req.method().as_str(), req.uri().path());
+
+            let root = Span::root(name, parent);
+
+            root.add_properties(|| {
+                [
+                    (HTTP_REQUEST_METHOD, req.method().to_string()),
+                    (URL_PATH, req.uri().path().to_string()),
+                    // TODO: use low cardinality route once poem supports it.
+                    (HTTP_ROUTE, req.uri().path().to_string()),
+                ]
+            });
+
+            root
+        } else {
+            Span::noop()
+        };
+
+        async {
+            let resp = self.inner.call(req).await?.into_response();
+            LocalSpan::add_property(|| {
+                (
+                    HTTP_RESPONSE_STATUS_CODE,
+                    resp.status().as_u16().to_string(),
+                )
+            });
+            Ok(resp)
+        }
+        .in_span(span)
+        .await
     }
 }
