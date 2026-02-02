@@ -39,7 +39,9 @@ type SpanContextExtractor = Arc<dyn Fn(&Request) -> Option<SpanContext> + Send +
 /// use poem::get;
 /// use poem::handler;
 ///
-/// let app = Route::new().at("/ping", get(ping)).with(FastraceMiddleware::default());
+/// let app = Route::new()
+///     .at("/ping", get(ping))
+///     .with(FastraceMiddleware::default());
 /// ```
 #[derive(Clone)]
 pub struct FastraceMiddleware {
@@ -66,9 +68,7 @@ impl FastraceMiddleware {
     ///
     /// Return `None` to keep the span as noop.
     pub fn with_span_context_extractor<F>(mut self, f: F) -> Self
-    where
-        F: Fn(&Request) -> Option<SpanContext> + Send + Sync + 'static,
-    {
+    where F: Fn(&Request) -> Option<SpanContext> + Send + Sync + 'static {
         self.span_context_extractor = Arc::new(f);
         self
     }
