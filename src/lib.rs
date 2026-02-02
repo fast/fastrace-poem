@@ -1,5 +1,7 @@
 #![doc = include_str!("../README.md")]
 
+use std::sync::Arc;
+
 use fastrace::prelude::*;
 use opentelemetry_semantic_conventions::trace::HTTP_REQUEST_METHOD;
 use opentelemetry_semantic_conventions::trace::HTTP_RESPONSE_STATUS_CODE;
@@ -18,11 +20,16 @@ use poem::Result;
 /// the W3C Trace Context specification.
 pub const TRACEPARENT_HEADER: &str = "traceparent";
 
+type SpanContextExtractor = Arc<dyn Fn(&Request) -> Option<SpanContext> + Send + Sync + 'static>;
+
 /// Middleware for integrating fastrace distributed tracing with Poem web framework.
 ///
 /// This middleware extracts trace context from incoming HTTP requests and creates
 /// a new root span for each request, properly linking it to any parent context
-/// that might exist from upstream services.
+/// that might exist from upstream services. By default, the middleware uses the
+/// `traceparent` header to extract a span context and falls back to a random context
+/// when the header is missing or invalid. If the configured extractor returns `None`,
+/// a noop span is used.
 ///
 /// # Example
 ///
@@ -32,16 +39,49 @@ pub const TRACEPARENT_HEADER: &str = "traceparent";
 /// use poem::get;
 /// use poem::handler;
 ///
-/// let app = Route::new().at("/ping", get(ping)).with(FastraceMiddleware);
+/// let app = Route::new().at("/ping", get(ping)).with(FastraceMiddleware::default());
 /// ```
-#[derive(Default)]
-pub struct FastraceMiddleware;
+#[derive(Clone)]
+pub struct FastraceMiddleware {
+    span_context_extractor: SpanContextExtractor,
+}
+
+impl Default for FastraceMiddleware {
+    fn default() -> Self {
+        Self {
+            span_context_extractor: Arc::new(|req| {
+                req.headers()
+                    .get(TRACEPARENT_HEADER)
+                    .and_then(|traceparent| {
+                        SpanContext::decode_w3c_traceparent(traceparent.to_str().ok()?)
+                    })
+                    .or_else(|| Some(SpanContext::random()))
+            }),
+        }
+    }
+}
+
+impl FastraceMiddleware {
+    /// Configure a custom span context extractor.
+    ///
+    /// Return `None` to keep the span as noop.
+    pub fn with_span_context_extractor<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&Request) -> Option<SpanContext> + Send + Sync + 'static,
+    {
+        self.span_context_extractor = Arc::new(f);
+        self
+    }
+}
 
 impl<E: Endpoint> Middleware<E> for FastraceMiddleware {
     type Output = FastraceEndpoint<E>;
 
     fn transform(&self, ep: E) -> Self::Output {
-        FastraceEndpoint { inner: ep }
+        FastraceEndpoint {
+            inner: ep,
+            span_context_extractor: self.span_context_extractor.clone(),
+        }
     }
 }
 
@@ -51,16 +91,14 @@ impl<E: Endpoint> Middleware<E> for FastraceMiddleware {
 /// of trace context from requests and the creation of spans around request handlers.
 pub struct FastraceEndpoint<E> {
     inner: E,
+    span_context_extractor: SpanContextExtractor,
 }
 
 impl<E: Endpoint> Endpoint for FastraceEndpoint<E> {
     type Output = Response;
 
     async fn call(&self, req: Request) -> Result<Self::Output> {
-        let headers = req.headers();
-        let parent = headers.get(TRACEPARENT_HEADER).and_then(|traceparent| {
-            SpanContext::decode_w3c_traceparent(traceparent.to_str().ok()?)
-        });
+        let parent = (self.span_context_extractor)(&req);
 
         let span = if let Some(parent) = parent {
             // TODO: use low cardinality route once poem supports it.
