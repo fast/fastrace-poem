@@ -38,6 +38,7 @@ type SpanContextExtractor = Arc<dyn Fn(&Request) -> Option<SpanContext> + Send +
 /// use poem::Route;
 /// use poem::get;
 /// use poem::handler;
+/// use poem::EndpointExt;
 ///
 /// let app = Route::new()
 ///     .at("/ping", get(ping))
