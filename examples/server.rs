@@ -36,7 +36,9 @@ async fn main() -> Result<(), std::io::Error> {
 
     // Create a route with the ping handler and add the FastraceMiddleware.
     // The middleware extracts trace context from incoming requests.
-    let app = Route::new().at("/ping", get(ping)).with(FastraceMiddleware);
+    let app = Route::new()
+        .at("/ping", get(ping))
+        .with(FastraceMiddleware::default());
 
     // Start the server.
     Server::new(TcpListener::bind("0.0.0.0:8080"))

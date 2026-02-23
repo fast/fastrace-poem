@@ -20,10 +20,10 @@ Context propagation is a fundamental concept in distributed tracing that enables
 
 ## Features
 
-- 🔄 **Automatic context propagation** via W3C traceparent headers.
-- 🌉 **Seamless integration** with Poem's middleware system.
-- 🔗 **Request tracing** with proper parent-child span relationships.
-- 📊 **Full compatibility** with fastrace's collection and reporting capabilities.
+- **Automatic context propagation** via W3C traceparent headers.
+- **Seamless integration** with Poem's middleware system.
+- **Request tracing** with proper parent-child span relationships.
+- **Full compatibility** with fastrace's collection and reporting capabilities.
 
 ## Installation
 
@@ -32,7 +32,7 @@ Add the following to your `Cargo.toml`:
 ```toml
 [dependencies]
 fastrace = "0.7"
-fastrace-poem = "0.1"
+fastrace-poem = "0.2"
 ```
 
 ## Usage
@@ -53,7 +53,7 @@ async fn main() -> Result<(), std::io::Error> {
     // Add the FastraceMiddleware to your routes.
     let app = Route::new()
         .at("/ping", get(ping))
-        .with(FastraceMiddleware);
+        .with(FastraceMiddleware::default());
     
     Server::new(TcpListener::bind("0.0.0.0:8080"))
         .run(app)
@@ -93,11 +93,32 @@ async fn send_request() {
 }
 ```
 
+### Custom span context extractor
+
+By default, the middleware reads the `traceparent` header and starts a new trace when it is
+missing or invalid. To customize extraction (for example, keep noop when it is missing),
+configure an extractor. Return `None` to keep noop:
+
+```rust
+use fastrace_poem::TRACEPARENT_HEADER;
+
+let middleware = fastrace_poem::FastraceMiddleware::default()
+    .with_span_context_extractor(|req| {
+        req.headers()
+            .get(TRACEPARENT_HEADER)
+            .and_then(|traceparent| {
+                fastrace::prelude::SpanContext::decode_w3c_traceparent(
+                    traceparent.to_str().ok()?,
+                )
+            })
+    });
+```
+
 ## How It Works
 
-1. When a request arrives, the middleware checks for a `traceparent` header.
-2. If present, it extracts the trace context; otherwise, it creates a new random context.
-3. A new root span is created for the request using the URI as the name.
+1. When a request arrives, the middleware runs the span context extractor. By default, it decodes the `traceparent` header, otherwise starts a new trace.
+2. If the extractor returns `None`, a noop span is used.
+3. When a context is available, a new root span is created for the request using the method and path as the name.
 4. The request handler is executed within this span, and any child spans are properly linked.
 5. The trace is then collected by your configured fastrace reporter.
 
