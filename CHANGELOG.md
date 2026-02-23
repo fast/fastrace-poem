@@ -8,7 +8,7 @@ All significant changes to this project will be documented in this file.
 
 ### Breaking Changes
 
-* `FastraceMiddleware` now requires construction; use `FastraceMiddleware::default()`.
+* `FastraceMiddleware` now requires construction `FastraceMiddleware::default()`.
 
 ### New Features
 
