@@ -8,7 +8,7 @@ All significant changes to this project will be documented in this file.
 
 ### Breaking Changes
 
-* `FastraceMiddleware` now requires construction; use `FastraceMiddleware::default()` or `with_span_context_extractor`.
+* `FastraceMiddleware` now requires construction; use `FastraceMiddleware::default()`.
 
 ### New Features
 
